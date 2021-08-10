@@ -4,7 +4,7 @@ import torch
 import nltk
 import urllib.request
 from models.model_builder import ExtSummarizer
-from newspaper import Article
+from newspaper import Article, ArticleException
 from ext_sum import summarize
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering
 import torch
@@ -28,65 +28,120 @@ def load_qna():
         "bert-large-uncased-whole-word-masking-finetuned-squad")
     return tokenizer, model
 
+
 def main():
-    st.markdown("<h1 style='text-align: center;'>Summarize and Ask ✏️</h1>",
-                unsafe_allow_html=True)
+    st.write("<h1 style='text-align : center'> Summarize and Ask </h1>",unsafe_allow_html=True)
+    st.write("""
+            <p style='text-align : justify'>
+            Summarize and Ask was made by James Liang for the OSS submission of Sunday August 9th 2021
+            </p>
+            """,unsafe_allow_html=True)
+    RAW_TEXT = "Raw Text"
+    URL = "URL"
+    AUTO_DETECT = "Auto Detect"
+    placeholder = "Your text here"
+    raw_input_type = st.radio("Input format", [AUTO_DETECT, RAW_TEXT, URL])
+    if raw_input_type == AUTO_DETECT:
+        RAW_TEXT_PLACEHOLDER = "Paste a URL or a text"
+        raw_text = st.text_area("", RAW_TEXT_PLACEHOLDER)
+        if raw_text == RAW_TEXT_PLACEHOLDER or raw_text == "":
+            return
+        if len(raw_text.split()) == 1 and raw_text.startswith("http"):
+            input_type = URL
+            url = raw_text
+        else:
+            input_type = RAW_TEXT
+            text = raw_text
 
-    # Download model
+    input_type = raw_input_type if raw_input_type != AUTO_DETECT else input_type
 
-    # Input
-    input_type = st.radio("Input Type: ", ["URL", "Raw Text"])
-    st.markdown("<h3 style='text-align: center;'>Input</h3>",
-                unsafe_allow_html=True)
+    if raw_input_type == RAW_TEXT:
+        text = st.text_area("", placeholder)
+    elif raw_input_type == URL:
+        url = st.text_input("", "URL here")
 
-    if input_type == "Raw Text":
-        with open("raw_data/input.txt") as f:
-            sample_text = f.read()
-        text = st.text_area("", sample_text, 200)
-    else:
-        url = st.text_input(
-            "", "https://www.cnn.com/2020/05/29/tech/facebook-violence-trump/index.html")
-        st.markdown(f"[*Read Original News*]({url})")
-        text = crawl_url(url)
-
-    input_fp = "raw_data/input.txt"
-    with open(input_fp, 'w') as file:
-        file.write(text)
-
-    # Summarize
+    if input_type == RAW_TEXT:
+        if text == placeholder or text == "" or len(text.split()) < 10:
+            st.info("Type more than 10 words")
+            return
+    elif input_type == URL:
+        valid_url = True
+        try:
+            text = get_article(url)
+        except ArticleException:
+            valid_url = False
+        if not valid_url:
+            st.info("Enter a valid url")
+            return
+        if len(text.split()) < 10:
+            st.info("Enter a URL that contains enough text")
+            return 
+        limited_text = " ".join(sent_tokenize(text)[:5])
+        blockquoted_text = '\n'.join([f'> {line}' for line in limited_text.split('\n')])
+        st.write("## URL Preview")
+        st.write(blockquoted_text)
+        st.write(f"Continue reading [here]({url})")
+    if abs(len(text) - len(limited_text)) < 10:
+        st.warning("""
+                We could not find more words other than the preview shown above. 
+                This occurs when content is locked for the public (news subscription / Medium).
+                Please be aware of it if you proceed.
+                Alternatively, you can paste the full text instead of the URL.
+                """)
+    raw_fp = write_raw_text(text)
+    result_fp = "./results/summary.txt"
     model = st.session_state["summarizer"]
-    sum_level = st.radio("Output Length: ", ["Short", "Medium"])
-    max_length = 3 if sum_level == "Short" else 5
-    result_fp = 'results/summary.txt'
-    summary = summarize(input_fp, result_fp, model, max_length=max_length)
-    points = sent_tokenize(summary)
-    li_points = '\n'.join([f"<li>{point}</li>" for point in points])
-    
-    st.markdown("<h3 style='text-align: center;'>Summary</h3>",
-                unsafe_allow_html=True)
-    st.markdown(f"<ol align='justify'>{li_points}</ol>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align : center'>Ask A Question </h3>",
-                unsafe_allow_html=True)
-    placeholder = "Ask any question..."
-    question = st.text_input("",placeholder)
-    if question != "" and question != placeholder:
-        answer = answer_question(question, text)
-        st.markdown(
-            f"<p style='text-align : justify'> {answer}</p>", unsafe_allow_html=True)
+    st.write("## Summary")
+    num_sentences = st.slider("Summary Length",3,8,step=1)
+    summary = summarize(raw_fp, result_fp, model,max_length=num_sentences)
+    summary = summarize(raw_fp, result_fp, model,max_length=num_sentences)
+    bullet_points = '\n'.join(
+        [f"<li> {sent} </li>" for sent in sent_tokenize(summary)])
+    st.write(f"<ol> {bullet_points} </ol>", unsafe_allow_html=True)
+
+    if len(summary) > 10:
+        st.write("## Question Time!")
+        placeholder = "Ask any question"
+        question = st.text_input("", placeholder)
+        if len(text.split()) > 400:
+            context = summarize(raw_fp,result_fp,model,max_length=50)
+        else:
+            context = text
+        if question == placeholder or question == "":
+            return
+        if len(question.split()) > 30:
+            st.warning("Woah there, write less than 30 words for your question.")
+            return 
+        info = st.info("Hold on, we're answering your question!")
+        context = ' '.join([word for word in context.split()][:480])
+        answer = answer_question(question, context)
+        info.empty()
+        st.write(f"Answer : {answer}")
+
+
+def write_raw_text(text):
+    raw_fp = "./raw_data/input.txt"
+    with open(raw_fp, "w") as f:
+        f.write(text)
+    return raw_fp
 
 
 def answer_question(question, text):
     tokenizer, model = st.session_state["models"]
-    inputs = tokenizer.encode_plus(question, text, add_special_tokens=True, return_tensors="pt")
+    inputs = tokenizer.encode_plus(
+        question, text, add_special_tokens=True, return_tensors="pt")
     input_ids = inputs["input_ids"].tolist()[0]
- 
-    text_tokens = tokenizer.convert_ids_to_tokens(input_ids)
-    answer_start_scores, answer_end_scores = model(**inputs)[0], model(**inputs)[1]
- 
-    answer_start = torch.argmax(answer_start_scores)  # Get the most likely beginning of answer with the argmax of the score
-    answer_end = torch.argmax(answer_end_scores) + 1  # Get the most likely end of answer with the argmax of the score
- 
-    answer = tokenizer.convert_tokens_to_string(tokenizer.convert_ids_to_tokens(input_ids[answer_start:answer_end]))
+
+    answer_start_scores, answer_end_scores = model(
+        **inputs)[0], model(**inputs)[1]
+
+    # Get the most likely beginning of answer with the argmax of the score
+    answer_start = torch.argmax(answer_start_scores)
+    # Get the most likely end of answer with the argmax of the score
+    answer_end = torch.argmax(answer_end_scores) + 1
+
+    answer = tokenizer.convert_tokens_to_string(
+        tokenizer.convert_ids_to_tokens(input_ids[answer_start:answer_end]))
     return answer
 
 
@@ -124,7 +179,7 @@ def download_model():
             progress_bar.empty()
 
 
-def crawl_url(url):
+def get_article(url):
     article = Article(url)
     article.download()
     article.parse()
