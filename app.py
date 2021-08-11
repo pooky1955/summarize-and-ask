@@ -25,7 +25,9 @@ def load_model(model_type):
         device="cpu", checkpoint=checkpoint, bert_type=model_type)
     return model
 
-
+@st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id})
+def load_qa():
+    return pipeline("question-answering")
 
 @st.cache(suppress_st_warning=True, show_spinner=False)
 def summarize_cached(input_text, model, max_length):
@@ -117,7 +119,8 @@ def main():
         else:
             context = text
         context = ' '.join([word for word in context.split()][:480])
-        answer, score = answer_question(question,context)
+        qa = load_qa()
+        answer, score = answer_question(question,context,qa)
         info.empty()
         if score < 0.05:
             st.warning(f"The model didn't know what to reply. Make sure you ask a valid question.")
@@ -128,9 +131,8 @@ def main():
             st.write(f"Answer : {answer}")
 
 @st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id})
-def answer_question(question,context):
-    model = st.session_state.qna
-    output = model(question=question,context=context)
+def answer_question(question,context,qa):
+    output = qa(question=question,context=context)
     return output['answer'], output['score']
 
 def write_raw_text(text):
@@ -184,6 +186,4 @@ if __name__ == "__main__":
     st.set_page_config(page_title="Summarize and Ask",page_icon=":book")
     if not os.path.exists("checkpoints/mobilebert_ext.pt"):
         download_model()
-    if not "qna" in st.session_state:
-        st.session_state.qna = pipeline("question-answering")
     main()
