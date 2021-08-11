@@ -119,8 +119,11 @@ def main():
         context = ' '.join([word for word in context.split()][:480])
         answer, score = answer_question(question,context)
         info.empty()
-        if score < 0.2:
+        if score < 0.05:
             st.warning(f"The model didn't know what to reply. Make sure you ask a valid question.")
+            st.info("This is what the model outputted, read at your own risk")
+            st.write(f"Answer : {answer}")
+
         else:
             st.write(f"Answer : {answer}")
 
