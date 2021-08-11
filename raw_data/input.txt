@@ -1,44 +1,5 @@
-BERT, Bi-directional Encoder Representation from Transformer, is a state of the art language model by Google which can be used for cutting-edge natural language processing (NLP) tasks.
-After reading this article, you will have a basic understanding of BERT and will be able to utilize it for your own business applications. It would be helpful if you are familiar with Python and have a general idea of machine learning.
-The BERT models I will cover in this article are:
-Binary or multi-class classification
-Regression model
-Question-answering applications
-Introduction to BERT
-BERT is trained on the entirety of Wikipedia (~2.5 billion words), along with a book corpus (~800 million words). In order to utilize BERT, you won’t have to repeat this compute-intensive process.
-BERT brings the transfer learning approach into the natural language processing area in a way that no language model has done before.
-Transfer Learning
-Transfer learning is a process where a machine learning model developed for a general task can be reused as a starting point for a specific business problem.
+The International Mathematical Olympiad (IMO) is the World Championship Mathematics Competition for High School students and is held annually in a different country. The first IMO was held in 1959 in Romania, with 7 countries participating. It has gradually expanded to over 100 countries from 5 continents. The IMO Board ensures that the competition takes place each year and that each host country observes the regulations and traditions of the IMO.
 
-Imagine you want to teach someone named Amanda, who doesn’t speak English, how to take the SAT. The first step would be to teach Amanda the English language as thoroughly as possible. Then, you can teach her more specifically for the SAT.
-In the context of a machine learning model, this idea is known as transfer learning. The first part of transfer learning is pre-training (similar to teaching Amanda English for the first time). After the pre-training is complete you can focus on a specific task (like teaching Amanda how to take the SAT). This is a process known as fine-tuning — changing the model so it can fit your specific business problem.
-BERT Pre-training
-This is a quick introduction about the BERT pre-training process. For practical purposes, you can use a pre-trained BERT model and do not need to perform this step.
+The IMO Foundation is a charity which supports the IMO. The IMO Foundation website is the public face of the IMO. This is a particularly valuable resource for people who are not necessarily mathematical specialists, but who want to understand the International Mathematical Olympiad.
 
-BERT takes two chunks of text as input. In the simplified example above, I referred to these two inputs as Sentence 1 and Sentence 2. In the pre-training for BERT, Sentence 2 intentionally does not follow Sentence 1 in about half of the training examples.
-Sentence 1 starts with a special token [CLS] and both sentences end with another special token [SEP]. There will be a single token for each word that is in the BERT vocabulary. If a word is not in the vocabulary, BERT will split that word into multiple tokens. Before feeding sentences to BERT, 15% of the tokens are masked.
-The pre-training process, the first step of transfer learning, is like teaching English to the BERT model so that it can be used for various tasks which require English knowledge. This is accomplished by the two practice tasks given to BERT:
-Predict masked (hidden) tokens. To illustrate, the words “favorite” and “to” are masked in the diagram above. BERT will try to predict these masked tokens as part of the pre-training. This is similar to a “fill in the blanks” task we may give to a student who is learning English. While trying to fill in the missing words, the student will learn the language. This is referred to as the Masked Language Model (MLM).
-BERT also tries to predict if Sentence 2 logically follows Sentence 1 or not in order to provide a deeper understanding about sentence dependencies. In the example above, Sentence 2 is in logical continuation of Sentence 1, so the prediction will be True. The special token [CLS] on the output side is used for this task.
-The BERT pre-trained model comes in many variants. The most common ones are BERT Large and BERT Base:
-
-BERT Fine-Tuning
-Fine-tuning is the next part of transfer learning. For specific tasks, such as text classification or question-answering, you would perform incremental training on a much smaller dataset. This adjusts the parameters of the pre-trained model.
-Use Cases
-To demonstrate practical uses of BERT, I am providing two examples below. The code and documentation are provided in both GitHub and Google Colab. You can use either of the options to follow along and try it out for yourself!
-Text Classification or Regression
-This is sample code for the binary classification of tweets. Here we have two types of tweets, disaster-related tweets (target = 1) and normal tweets (target = 0). We fine-tune the BERT Base model to classify tweets into these two groups.
-GitHub: https://github.com/sanigam/BERT_Medium
-Google Colab: https://colab.research.google.com/drive/1ARH9dnugVuKjRTNorKIVrgRKitjg051c?usp=sharing
-This code can be used for multi-class classification or regression by using appropriate values of parameters in the function bert_model_creation(). The code provides details on parameter values. If you want, you can add additional dense layers into this function.
-2. BERT for Question-Answering
-This is another interesting use case for BERT, where you input a passage and a question into the BERT model. It can find the answer to the question based on information given in the passage. In this code, I am using the BERT Large model, which is already fine-tuned on the Stanford Question Answer Dataset (SQuAD). You will see how to use this fine-tuned model to get answers from a given passage.
-GitHub: https://github.com/sanigam/BERT_QA_Medium
-Google Colab: https://colab.research.google.com/drive/1ZpeVygQJW3O2Olg1kZuLnybxZMV1GpKK?usp=sharing
-Example with this use case:
-Passage — “John is a 10 year old boy. He is the son of Robert Smith. Elizabeth Davis is Robert’s wife. She teaches at UC Berkeley. Sophia Smith is Elizabeth’s daughter. She studies at UC Davis”
-Question — “Which college does John’s sister attend?”
-When these two inputs are passed in, the model returns the correct answer, “uc davis”
-This example proves that BERT can understand language structure and handle dependencies across sentences. It can apply simple logic to answer the question (e.g. to find out who John’s sister is). Please note that you can have a passage that is much longer than the example shown above, but the total length of the question and passage cannot exceed 512 tokens. If your passage is longer than that, the code will automatically truncate the extra part.
-The code provides examples in addition to the one shown above— a total of 3 passages and 22 questions. One of these passages is a version of my BERT article. You will see that BERT QA is able to answer any question where it can get answer from the passage. You can customize the code for your own question-answering applications.
-Hopefully this provides you with a good jump start to use BERT for your own practical applications. If you have any questions or feedback, feel free to let me know!
+Data is held at IMO-official in compliance with EU data protection legislation. If a participant wishes to become anonymous (neither photo nor name on public display), then contact the IMO secretary with a request. We will comply with bona fide requests expeditiously.

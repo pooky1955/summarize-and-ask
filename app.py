@@ -6,13 +6,18 @@ import urllib.request
 from models.model_builder import ExtSummarizer
 from newspaper import Article, ArticleException
 from ext_sum import summarize
-from transformers import AutoTokenizer, AutoModelForQuestionAnswering
+from transformers import pipeline
+import transformers
 import torch
 from typing import Any
 from nltk.tokenize import sent_tokenize
+from tokenizers import Tokenizer
+
+RESULT_FP = "./results/summary.txt"
+RAW_FP = "./raw_data/input.txt"
 
 
-@st.cache(suppress_st_warning=True)
+@st.cache(suppress_st_warning=True, show_spinner=False)
 def load_model(model_type):
     checkpoint = torch.load(
         f'checkpoints/{model_type}_ext.pt', map_location='cpu')
@@ -21,25 +26,25 @@ def load_model(model_type):
     return model
 
 
-def load_qna():
-    tokenizer = AutoTokenizer.from_pretrained(
-        "bert-large-uncased-whole-word-masking-finetuned-squad")
-    model = AutoModelForQuestionAnswering.from_pretrained(
-        "bert-large-uncased-whole-word-masking-finetuned-squad")
-    return tokenizer, model
+
+@st.cache(suppress_st_warning=True, show_spinner=False)
+def summarize_cached(input_text, model, max_length):
+    return summarize(RAW_FP, RESULT_FP, model, max_length=max_length)
 
 
 def main():
-    st.write("<h1 style='text-align : center'> Summarize and Ask </h1>",unsafe_allow_html=True)
+    st.write("<h1 style='text-align : center'> Summarize and Ask </h1>",
+             unsafe_allow_html=True)
     st.write("""
             <p style='text-align : justify'>
             Summarize and Ask was made by James Liang for the OSS submission of Sunday August 9th 2021
             </p>
-            """,unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
     RAW_TEXT = "Raw Text"
     URL = "URL"
     AUTO_DETECT = "Auto Detect"
     placeholder = "Your text here"
+    model = load_model("mobilebert")
     raw_input_type = st.radio("Input format", [AUTO_DETECT, RAW_TEXT, URL])
     if raw_input_type == AUTO_DETECT:
         RAW_TEXT_PLACEHOLDER = "Paste a URL or a text"
@@ -54,7 +59,6 @@ def main():
             text = raw_text
 
     input_type = raw_input_type if raw_input_type != AUTO_DETECT else input_type
-
     if raw_input_type == RAW_TEXT:
         text = st.text_area("", placeholder)
     elif raw_input_type == URL:
@@ -75,9 +79,10 @@ def main():
             return
         if len(text.split()) < 10:
             st.info("Enter a URL that contains enough text")
-            return 
+            return
         limited_text = " ".join(sent_tokenize(text)[:5])
-        blockquoted_text = '\n'.join([f'> {line}' for line in limited_text.split('\n')])
+        blockquoted_text = '\n'.join(
+            [f'> {line}' for line in limited_text.split('\n')])
         st.write("## URL Preview")
         st.write(blockquoted_text)
         st.write(f"Continue reading [here]({url})")
@@ -89,12 +94,9 @@ def main():
                     Alternatively, you can paste the full text instead of the URL.
                     """)
     raw_fp = write_raw_text(text)
-    result_fp = "./results/summary.txt"
-    model = st.session_state["summarizer"]
     st.write("## Summary")
-    num_sentences = st.slider("Summary Length",3,8,step=1)
-    summary = summarize(raw_fp, result_fp, model,max_length=num_sentences)
-    summary = summarize(raw_fp, result_fp, model,max_length=num_sentences)
+    num_sentences = st.slider("Summary Length", 3, 8, step=1)
+    summary = summarize_cached(text, model, max_length=num_sentences)
     bullet_points = '\n'.join(
         [f"<li> {sent} </li>" for sent in sent_tokenize(summary)])
     st.write(f"<ol> {bullet_points} </ol>", unsafe_allow_html=True)
@@ -103,46 +105,35 @@ def main():
         st.write("## Question Time!")
         placeholder = "Ask any question"
         question = st.text_input("", placeholder)
-        if len(text.split()) > 400:
-            context = summarize(raw_fp,result_fp,model,max_length=50)
-        else:
-            context = text
         if question == placeholder or question == "":
             return
         if len(question.split()) > 30:
-            st.warning("Woah there, write less than 30 words for your question.")
-            return 
+            st.warning(
+                "Woah there, write less than 30 words for your question.")
+            return
         info = st.info("Hold on, we're answering your question!")
+        if len(text.split()) > 400:
+            context = summarize_cached(text, model, max_length=20)
+        else:
+            context = text
         context = ' '.join([word for word in context.split()][:480])
-        answer = answer_question(question, context)
+        answer, score = answer_question(question,context)
         info.empty()
-        st.write(f"Answer : {answer}")
+        if score < 0.2:
+            st.warning(f"The model didn't know what to reply. Make sure you ask a valid question.")
+        else:
+            st.write(f"Answer : {answer}")
 
+@st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id})
+def answer_question(question,context):
+    model = st.session_state.qna
+    output = model(question=question,context=context)
+    return output['answer'], output['score']
 
 def write_raw_text(text):
-    raw_fp = "./raw_data/input.txt"
-    with open(raw_fp, "w") as f:
+    with open(RAW_FP, "w") as f:
         f.write(text)
-    return raw_fp
-
-
-def answer_question(question, text):
-    tokenizer, model = st.session_state["models"]
-    inputs = tokenizer.encode_plus(
-        question, text, add_special_tokens=True, return_tensors="pt")
-    input_ids = inputs["input_ids"].tolist()[0]
-
-    answer_start_scores, answer_end_scores = model(
-        **inputs)[0], model(**inputs)[1]
-
-    # Get the most likely beginning of answer with the argmax of the score
-    answer_start = torch.argmax(answer_start_scores)
-    # Get the most likely end of answer with the argmax of the score
-    answer_end = torch.argmax(answer_end_scores) + 1
-
-    answer = tokenizer.convert_tokens_to_string(
-        tokenizer.convert_ids_to_tokens(input_ids[answer_start:answer_end]))
-    return answer
+    return RAW_FP
 
 
 def download_model():
@@ -187,10 +178,7 @@ def get_article(url):
 
 
 if __name__ == "__main__":
-    if 'models' not in st.session_state:
-        st.session_state.models = load_qna()
-    if 'summarizer' not in st.session_state:
-        if not os.path.exists('checkpoints/mobilebert_ext.pt'):
-            download_model()
-        st.session_state.summarizer = load_model("mobilebert")
+    st.set_page_config(page_title="Summarize and Ask",page_icon=":book")
+    if not "qna" in st.session_state:
+        st.session_state.qna = pipeline("question-answering")
     main()

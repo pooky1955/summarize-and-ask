@@ -5,7 +5,6 @@ from transformers import BertTokenizer
 from nltk.tokenize import sent_tokenize
 from models.model_builder import ExtSummarizer
 
-
 def preprocess(source_fp):
     """
     - Remove \n
@@ -105,7 +104,6 @@ def test(model, input_data, result_path, max_length, block_trigram=True):
 
             for i in range(len(pred)):
                 save_pred.write(pred[i].strip() + "\n")
-
 
 def summarize(raw_txt_fp, result_fp, model, max_length=3, max_pos=512, return_summary=True):
     model.eval()
