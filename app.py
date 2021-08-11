@@ -178,9 +178,9 @@ def get_article(url):
 
 
 if __name__ == "__main__":
+    st.set_page_config(page_title="Summarize and Ask",page_icon=":book")
     if not os.path.exists("checkpoints/mobilebert_ext.pt"):
         download_model()
-    st.set_page_config(page_title="Summarize and Ask",page_icon=":book")
     if not "qna" in st.session_state:
         st.session_state.qna = pipeline("question-answering")
     main()
