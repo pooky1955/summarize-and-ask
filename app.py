@@ -15,9 +15,10 @@ from tokenizers import Tokenizer
 
 RESULT_FP = "./results/summary.txt"
 RAW_FP = "./raw_data/input.txt"
+TEN_MINUTES = 10 * 60
 
 
-@st.cache(suppress_st_warning=True, show_spinner=False)
+@st.cache(suppress_st_warning=True, show_spinner=False,max_entries=2,ttl=TEN_MINUTES)
 def load_model(model_type):
     checkpoint = torch.load(
         f'checkpoints/{model_type}_ext.pt', map_location='cpu')
@@ -25,11 +26,11 @@ def load_model(model_type):
         device="cpu", checkpoint=checkpoint, bert_type=model_type)
     return model
 
-@st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id})
+@st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id},max_entries=2,ttl=TEN_MINUTES)
 def load_qa():
     return pipeline("question-answering")
 
-@st.cache(suppress_st_warning=True, show_spinner=False)
+@st.cache(suppress_st_warning=True, show_spinner=False,max_entries=50,ttl=TEN_MINUTES)
 def summarize_cached(input_text, model, max_length):
     return summarize(RAW_FP, RESULT_FP, model, max_length=max_length)
 
@@ -130,7 +131,7 @@ def main():
         else:
             st.write(f"Answer : {answer}")
 
-@st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id})
+@st.cache(suppress_st_warning=True,show_spinner=False,hash_funcs={Tokenizer : id},max_entries=50,ttl=TEN_MINUTES)
 def answer_question(question,context,qa):
     output = qa(question=question,context=context)
     return output['answer'], output['score']
