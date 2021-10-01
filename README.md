@@ -1,6 +1,6 @@
 # Summarize And Ask
 Summarizer + QnA using StreamLit and MobileBertSum
-
+Here is a web demo : https://share.streamlit.io/pooky1955/summarize-and-ask/app.py
 Streamlit Starter code and MobileBERTSum Code provided by : https://github.com/chriskhanhtran/bert-extractive-summarization/
 
 It uses the transformers BERT to answer questions and MobileBertSum to perform extractive summarization.
